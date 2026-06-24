@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>余白診断 — 今の自分を知る</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700&family=Noto+Sans+JP:wght@300;400;500&display=swap');
+
+  :root {
+    --ink: #1a1612;
+    --paper: #f5f0e8;
+    --warm-mid: #c8b89a;
+    --accent: #7a4f2e;
+    --accent-light: #d4956a;
+    --danger: #c0392b;
+    --safe: #5a7a5a;
+    --mid: #b8860b;
+    --shadow: rgba(26,22,18,0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Washi texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 56px;
+    animation: fadeDown 0.8s ease both;
+  }
+
+  .header-label {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 11px;
+    font-weight: 300;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    opacity: 0.8;
+  }
+
+  .header h1 {
+    font-family: 'Shippori Mincho', serif;
+    font-size: clamp(28px, 6vw, 42px);
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--ink);
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+  }
+
+  .header-sub {
+    font-size: 13px;
+    font-weight: 300;
+    color: var(--accent);
+    line-height: 1.8;
+    opacity: 0.85;
+  }
+
+  /* Divider */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 32px 0;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--warm-mid));
+  }
+  .divider::after { background: linear-gradient(to left, transparent, var(--warm-mid)); }
+  .divider-icon {
+    width: 6px; height: 6px;
+    background: var(--accent-light);
+    transform: rotate(45deg);
+    flex-shrink: 0;
+  }
+
+  /* Section */
+  .section {
+    margin-bottom: 48px;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .section-title {
+    font-family: 'Shippori Mincho', serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-title .num {
+    font-size: 11px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 300;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    background: rgba(122,79,46,0.08);
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+
+  .section-desc {
+    font-size: 12px;
+    font-weight: 300;
+    color: var(--accent);
+    margin-bottom: 20px;
+    line-height: 1.7;
+    padding-left: 4px;
+  }
+
+  /* Question Card */
+  .question {
+    background: white;
+    border: 1px solid rgba(200,184,154,0.4);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 12px var(--shadow);
+    transition: box-shadow 0.2s;
+  }
+
+  .question:hover { box-shadow: 0 4px 20px rgba(26,22,18,0.15); }
+
+  .question-text {
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.8;
+    color: var(--ink);
+    margin-bottom: 16px;
+  }
+
+  .options {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .option {
+    flex: 1;
+    min-width: 80px;
+    padding: 10px 6px;
+    border: 1.5px solid var(--warm-mid);
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    text-align: center;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--ink);
+    transition: all 0.2s ease;
+    position: relative;
+    line-height: 1.4;
+  }
+
+  .option:hover {
+    border-color: var(--accent-light);
+    background: rgba(212,149,106,0.08);
+  }
+
+  .option.selected {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: white;
+    box-shadow: 0 2px 8px rgba(122,79,46,0.3);
+  }
+
+  .option-score {
+    display: block;
+    font-size: 18px;
+    font-weight: 300;
+    margin-bottom: 2px;
+    font-family: 'Shippori Mincho', serif;
+  }
+
+  /* Result area */
+  .result-area {
+    display: none;
+    animation: fadeUp 0.8s ease both;
+  }
+
+  .result-area.visible { display: block; }
+
+  /* Gauge */
+  .gauge-container {
+    background: white;
+    border: 1px solid rgba(200,184,154,0.4);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 24px var(--shadow);
+    text-align: center;
+  }
+
+  .gauge-label {
+    font-family: 'Shippori Mincho', serif;
+    font-size: 15px;
+    color: var(--accent);
+    margin-bottom: 20px;
+    letter-spacing: 0.1em;
+  }
+
+  .gauge-wrap {
+    position: relative;
+    margin: 0 auto 20px;
+    width: 200px;
+    height: 100px;
+  }
+
+  .gauge-svg {
+    width: 200px;
+    height: 110px;
+  }
+
+  .gauge-track {
+    fill: none;
+    stroke: #ece5d8;
+    stroke-width: 18;
+    stroke-linecap: round;
+  }
+
+  .gauge-fill {
+    fill: none;
+    stroke-width: 18;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1.5s cubic-bezier(0.22, 1, 0.36, 1),
+                stroke 1s ease;
+  }
+
+  .gauge-pct {
+    font-family: 'Shippori Mincho', serif;
+    font-size: 36px;
+    font-weight: 600;
+    fill: var(--ink);
+  }
+
+  .gauge-unit {
+    font-size: 13px;
+    fill: var(--accent);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 300;
+  }
+
+  /* Score cards */
+  .score-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .score-card {
+    background: white;
+    border: 1px solid rgba(200,184,154,0.4);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 12px var(--shadow);
+  }
+
+  .score-card-label {
+    font-size: 11px;
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+
+  .score-card-value {
+    font-family: 'Shippori Mincho', serif;
+    font-size: 40px;
+    font-weight: 600;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .score-card-sub {
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 300;
+  }
+
+  /* Bar visualization */
+  .bar-section {
+    background: white;
+    border: 1px solid rgba(200,184,154,0.4);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 12px var(--shadow);
+  }
+
+  .bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    margin-bottom: 8px;
+    color: var(--ink);
+  }
+
+  .bar-label span:last-child { font-weight: 500; }
+
+  .bar-track {
+    height: 10px;
+    background: #ece5d8;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+    width: 0;
+  }
+
+  /* Message */
+  .message-card {
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 24px;
+    border-left: 4px solid;
+    background: white;
+    box-shadow: 0 2px 12px var(--shadow);
+  }
+
+  .message-card .msg-level {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    font-weight: 500;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+
+  .message-card .msg-title {
+    font-family: 'Shippori Mincho', serif;
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+
+  .message-card .msg-body {
+    font-size: 13px;
+    font-weight: 300;
+    line-height: 2;
+    color: #4a3f35;
+  }
+
+  /* Insight list */
+  .insight-list {
+    background: white;
+    border: 1px solid rgba(200,184,154,0.4);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 12px var(--shadow);
+    margin-bottom: 24px;
+  }
+
+  .insight-list h3 {
+    font-family: 'Shippori Mincho', serif;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--ink);
+  }
+
+  .insight-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(200,184,154,0.2);
+    font-size: 13px;
+    font-weight: 300;
+    line-height: 1.8;
+    color: #4a3f35;
+  }
+
+  .insight-item:last-child { border-bottom: none; }
+
+  .insight-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--accent-light);
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 8px;
+    transform: rotate(45deg);
+    border-radius: 1px;
+  }
+
+  /* CTA button */
+  .btn-restart {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    border-radius: 10px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.15em;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+
+  .btn-restart:hover {
+    background: var(--accent);
+    box-shadow: 0 4px 16px rgba(122,79,46,0.3);
+  }
+
+  /* Calculate button */
+  .calc-btn {
+    display: none;
+    width: 100%;
+    padding: 18px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Shippori Mincho', serif;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 20px rgba(122,79,46,0.25);
+    margin-top: 8px;
+  }
+
+  .calc-btn:hover {
+    background: #5c3820;
+    box-shadow: 0 6px 28px rgba(122,79,46,0.4);
+    transform: translateY(-1px);
+  }
+
+  .calc-btn.visible { display: block; animation: fadeUp 0.5s ease both; }
+
+  /* Progress */
+  .progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: var(--accent-light);
+    transition: width 0.4s ease;
+    z-index: 100;
+  }
+
+  /* Animations */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes countUp {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .section:nth-child(1) { animation-delay: 0.1s; }
+  .section:nth-child(2) { animation-delay: 0.2s; }
+  .section:nth-child(3) { animation-delay: 0.3s; }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-label">Self Awareness Session</div>
+    <h1>心と時間の<br>余白診断</h1>
+    <div class="header-sub">
+      今この瞬間、あなたの中に<br>どれだけの「余白」が残っていますか？
+    </div>
+  </div>
+
+  <div class="divider"><div class="divider-icon"></div></div>
+
+  <!-- Quiz area -->
+  <div id="quizArea">
+
+    <!-- Section A: Mental Margin -->
+    <div class="section">
+      <div class="section-title">
+        <span class="num">A</span>
+        こころの余裕度
+      </div>
+      <div class="section-desc">直感で答えてください。今、この瞬間の自分と重なる選択肢を選んでください。</div>
+
+      <!-- Q1 -->
+      <div class="question" data-q="q1">
+        <div class="question-text">① 予定外のことが起きたとき、どう感じますか？</div>
+        <div class="options">
+          <button class="option" data-score="0" onclick="select(this,'q1',0)">
+            <span class="option-score">😤</span>
+            とても<br>困る
+          </button>
+          <button class="option" data-score="1" onclick="select(this,'q1',1)">
+            <span class="option-score">😰</span>
+            かなり<br>焦る
+          </button>
+          <button class="option" data-score="2" onclick="select(this,'q1',2)">
+            <span class="option-score">😐</span>
+            少し<br>動揺する
+          </button>
+          <button class="option" data-score="3" onclick="select(this,'q1',3)">
+            <span class="option-score">😌</span>
+            わりと<br>落ち着く
+          </button>
+          <button class="option" data-score="4" onclick="select(this,'q1',4)">
+            <span class="option-score">😊</span>
+            柔軟に<br>対応できる
+          </button>
+        </div>
+      </div>
+
+      <!-- Q2 -->
+      <div class="question" data-q="q2">
+        <div class="question-text">② 他者の感情やニーズに、どのくらい応えられていますか？</div>
+        <div class="options">
+          <button class="option" data-score="0" onclick="select(this,'q2',0)">
+            <span class="option-score">😵</span>
+            余裕が<br>なくて無理
+          </button>
+          <button class="option" data-score="1" onclick="select(this,'q2',1)">
+            <span class="option-score">😓</span>
+            ほとんど<br>できていない
+          </button>
+          <button class="option" data-score="2" onclick="select(this,'q2',2)">
+            <span class="option-score">🤔</span>
+            ときどき<br>できる
+          </button>
+          <button class="option" data-score="3" onclick="select(this,'q2',3)">
+            <span class="option-score">🙂</span>
+            だいたい<br>できている
+          </button>
+          <button class="option" data-score="4" onclick="select(this,'q2',4)">
+            <span class="option-score">😄</span>
+            自然に<br>できている
+          </button>
+        </div>
+      </div>
+
+      <!-- Q3 -->
+      <div class="question" data-q="q3">
+        <div class="question-text">③ 「何もしない」時間について、どう感じますか？</div>
+        <div class="options">
+          <button class="option" data-score="0" onclick="select(this,'q3',0)">
+            <span class="option-score">😖</span>
+            罪悪感が<br>とても強い
+          </button>
+          <button class="option" data-score="1" onclick="select(this,'q3',1)">
+            <span class="option-score">😟</span>
+            落ち着か<br>なくなる
+          </button>
+          <button class="option" data-score="2" onclick="select(this,'q3',2)">
+            <span class="option-score">😶</span>
+            やや<br>もったいない
+          </button>
+          <button class="option" data-score="3" onclick="select(this,'q3',3)">
+            <span class="option-score">🙂</span>
+            必要だと<br>思える
+          </button>
+          <button class="option" data-score="4" onclick="select(this,'q3',4)">
+            <span class="option-score">😌</span>
+            大切な時間<br>だと感じる
+          </button>
+        </div>
+      </div>
+
+      <!-- Q4 -->
+      <div class="question" data-q="q4">
+        <div class="question-text">④ 最近、純粋に「楽しい」と感じた瞬間はありましたか？</div>
+        <div class="options">
+          <button class="option" data-score="0" onclick="select(this,'q4',0)">
+            <span class="option-score">🌑</span>
+            思い出<br>せない
+          </button>
+          <button class="option" data-score="1" onclick="select(this,'q4',1)">
+            <span class="option-score">🌘</span>
+            ずっと<br>前が最後
+          </button>
+          <button class="option" data-score="2" onclick="select(this,'q4',2)">
+            <span class="option-score">🌗</span>
+            数週間<br>前にあった
+          </button>
+          <button class="option" data-score="3" onclick="select(this,'q4',3)">
+            <span class="option-score">🌔</span>
+            最近<br>あった
+          </button>
+          <button class="option" data-score="4" onclick="select(this,'q4',4)">
+            <span class="option-score">🌕</span>
+            今週も<br>あった
+          </button>
+        </div>
+      </div>
+
+      <!-- Q5 -->
+      <div class="question" data-q="q5">
+        <div class="question-text">⑤ 今の自分のエネルギー残量は？</div>
+        <div class="options">
+          <button class="option" data-score="0" onclick="select(this,'q5',0)">
+            <span class="option-score">🪫</span>
+            ほぼ空
+          </button>
+          <button class="option" data-score="1" onclick="select(this,'q5',1)">
+            <span class="option-score">🔴</span>
+            20%以下
+          </button>
+          <button class="option" data-score="2" onclick="select(this,'q5',2)">
+            <span class="option-score">🟡</span>
+            40〜50%
+          </button>
+          <button class="option" data-score="3" onclick="select(this,'q5',3)">
+            <span class="option-score">🟢</span>
+            60〜80%
+          </button>
+          <button class="option" data-score="4" onclick="select(this,'q5',4)">
+            <span class="option-score">🔋</span>
+            ほぼ満充電
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"><div class="divider-icon"></div></div>
+
+    <!-- Section B: Time Margin -->
+    <div class="section">
+      <div class="section-title">
+        <span class="num">B</span>
+        じかんの余裕度
+      </div>
+      <div class="section-desc">スケジュールや時間の使い方について、現状に近いものを選んでください。</div>
+
+      <!-- Q6 -->
+      <div class="question" data-q="q6">
+        <div class="question-text">⑥ 1日のスケジュールの「詰まり具合」は？</div>
+        <div class="options">
+          <button class="option" data-score="0" onclick="select(this,'q6',0)">
+            <span class="option-score">🔥</span>
+            すき間<br>ゼロ
+          </button>
+          <button class="option" data-score="1" onclick="select(this,'q6',1)">
+            <span class="option-score">📦</span>
+            ほぼ<br>いっぱい
+          </button>
+          <button class="option" data-score="2" onclick="select(this,'q6',2)">
+            <span class="option-score">📋</span>
+            少し<br>余裕あり
+          </button>
+          <button class="option" data-score="3" onclick="select(this,'q6',3)">
+            <span class="option-score">📄</span>
+            わりと<br>ゆとりあり
+          </button>
+          <button class="option" data-score="4" onclick="select(this,'q6',4)">
+            <span class="option-score">🌿</span>
+            十分な<br>余白あり
+          </button>
+        </div>
+      </div>
+
+      <!-- Q7 -->
+      <div class="question" data-q="q7">
+        <div class="question-text">⑦ 締め切りや納期への対応は？</div>
+        <div class="options">
+          <button class="option" data-score="0" onclick="select(this,'q7',0)">
+            <span class="option-score">💦</span>
+            常にギリギリ<br>か遅れる
+          </button>
+          <button class="option" data-score="1" onclick="select(this,'q7',1)">
+            <span class="option-score">😬</span>
+            たいてい<br>ギリギリ
+          </button>
+          <button class="option" data-score="2" onclick="select(this,'q7',2)">
+            <span class="option-score">😐</span>
+            なんとか<br>間に合う
+          </button>
+          <button class="option" data-score="3" onclick="select(this,'q7',3)">
+            <span class="option-score">👍</span>
+            だいたい<br>余裕あり
+          </button>
+          <button class="option" data-score="4" onclick="select(this,'q7',4)">
+            <span class="option-score">✨</span>
+            常に<br>余裕あり
+          </button>
+        </div>
+      </div>
+
+      <!-- Q8 -->
+      <div class="question" data-q="q8">
+        <div class="question-text">⑧ 「考える・振り返る」時間はとれていますか？</div>
+        <div class="options">
+          <button class="option" data-score="0" onclick="select(this,'q8',0)">
+            <span class="option-score">🚫</span>
+            全く<br>とれない
+          </button>
+          <button class="option" data-score="1" onclick="select(this,'q8',1)">
+            <span class="option-score">⛔</span>
+            ほとんど<br>ない
+          </button>
+          <button class="option" data-score="2" onclick="select(this,'q8',2)">
+            <span class="option-score">⚠️</span>
+            週に一度<br>あるかも
+          </button>
+          <button class="option" data-score="3" onclick="select(this,'q8',3)">
+            <span class="option-score">✅</span>
+            定期的に<br>とれている
+          </button>
+          <button class="option" data-score="4" onclick="select(this,'q8',4)">
+            <span class="option-score">🌟</span>
+            十分<br>確保できている
+          </button>
+        </div>
+      </div>
+
+      <!-- Q9 -->
+      <div class="question" data-q="q9">
+        <div class="question-text">⑨ 食事・睡眠・休息の時間は？</div>
+        <div class="options">
+          <button class="option" data-score="0" onclick="select(this,'q9',0)">
+            <span class="option-score">😴</span>
+            犠牲に<br>なっている
+          </button>
+          <button class="option" data-score="1" onclick="select(this,'q9',1)">
+            <span class="option-score">😪</span>
+            かなり<br>削っている
+          </button>
+          <button class="option" data-score="2" onclick="select(this,'q9',2)">
+            <span class="option-score">😑</span>
+            最低限<br>は確保
+          </button>
+          <button class="option" data-score="3" onclick="select(this,'q9',3)">
+            <span class="option-score">😊</span>
+            だいたい<br>確保できている
+          </button>
+          <button class="option" data-score="4" onclick="select(this,'q9',4)">
+            <span class="option-score">😇</span>
+            しっかり<br>確保できている
+          </button>
+        </div>
+      </div>
+
+      <!-- Q10 -->
+      <div class="question" data-q="q10">
+        <div class="question-text">⑩ 「やらなくていいこと」を断れていますか？</div>
+        <div class="options">
+          <button class="option" data-score="0" onclick="select(this,'q10',0)">
+            <span class="option-score">🙅</span>
+            断れず<br>何でも引き受ける
+          </button>
+          <button class="option" data-score="1" onclick="select(this,'q10',1)">
+            <span class="option-score">😔</span>
+            断るのが<br>苦手
+          </button>
+          <button class="option" data-score="2" onclick="select(this,'q10',2)">
+            <span class="option-score">🤷</span>
+            ときどき<br>断れる
+          </button>
+          <button class="option" data-score="3" onclick="select(this,'q10',3)">
+            <span class="option-score">🙂</span>
+            わりと<br>断れる
+          </button>
+          <button class="option" data-score="4" onclick="select(this,'q10',4)">
+            <span class="option-score">💪</span>
+            上手に<br>断れる
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <button class="calc-btn" id="calcBtn" onclick="calculate()">
+      診断結果を見る →
+    </button>
+
+  </div><!-- end quizArea -->
+
+  <!-- Result -->
+  <div class="result-area" id="resultArea">
+
+    <div class="header" style="margin-bottom:32px;">
+      <div class="header-label">Your Result</div>
+      <h1 style="font-size:28px;">診断結果</h1>
+    </div>
+
+    <!-- Two score cards -->
+    <div class="score-cards">
+      <div class="score-card">
+        <div class="score-card-label">こころの余裕度</div>
+        <div class="score-card-value" id="mindPct" style="color: var(--accent);">—</div>
+        <div class="score-card-sub">/ 100%</div>
+      </div>
+      <div class="score-card">
+        <div class="score-card-label">じかんの余裕度</div>
+        <div class="score-card-value" id="timePct" style="color: var(--accent);">—</div>
+        <div class="score-card-sub">/ 100%</div>
+      </div>
+    </div>
+
+    <!-- Gauge -->
+    <div class="gauge-container">
+      <div class="gauge-label">総合余白スコア</div>
+      <div class="gauge-wrap">
+        <svg class="gauge-svg" viewBox="0 0 200 110">
+          <path class="gauge-track"
+            d="M 20 100 A 80 80 0 0 1 180 100"
+            stroke-dasharray="251.2" stroke-dashoffset="0"
+          />
+          <path class="gauge-fill" id="gaugeFill"
+            d="M 20 100 A 80 80 0 0 1 180 100"
+            stroke-dasharray="251.2" stroke-dashoffset="251.2"
+          />
+          <text x="100" y="88" text-anchor="middle" class="gauge-pct" id="gaugePct">0</text>
+          <text x="100" y="104" text-anchor="middle" class="gauge-unit">%</text>
+        </svg>
+      </div>
+      <div id="gaugeDesc" style="font-size:13px; color:var(--accent); font-weight:300; line-height:1.8;"></div>
+    </div>
+
+    <!-- Bars -->
+    <div class="bar-section">
+      <div class="bar-label">
+        <span>🧠 こころの余裕度</span>
+        <span id="mindBar-label">—</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="mindBarFill"></div></div>
+
+      <div class="bar-label">
+        <span>🕐 じかんの余裕度</span>
+        <span id="timeBar-label">—</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="timeBarFill"></div></div>
+    </div>
+
+    <!-- Message -->
+    <div class="message-card" id="messageCard">
+      <div class="msg-level" id="msgLevel"></div>
+      <div class="msg-title" id="msgTitle"></div>
+      <div class="msg-body" id="msgBody"></div>
+    </div>
+
+    <!-- Insights -->
+    <div class="insight-list" id="insightList">
+      <h3>あなたへの気づき</h3>
+    </div>
+
+    <button class="btn-restart" onclick="restart()">もう一度診断する</button>
+
+  </div>
+
+</div><!-- end container -->
+
+<script>
+const answers = {};
+let answered = 0;
+const TOTAL = 10;
+
+function select(el, qId, score) {
+  const prev = document.querySelector(`[data-q="${qId}"] .option.selected`);
+  if (!prev) answered++;
+  document.querySelectorAll(`[data-q="${qId}"] .option`).forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  answers[qId] = score;
+  updateProgress();
+  if (answered >= TOTAL) {
+    document.getElementById('calcBtn').classList.add('visible');
+  }
+}
+
+function updateProgress() {
+  const pct = (answered / TOTAL) * 100;
+  document.getElementById('progressBar').style.width = pct + '%';
+}
+
+function getColor(pct) {
+  if (pct <= 30) return '#c0392b';
+  if (pct <= 55) return '#b8860b';
+  return '#5a7a5a';
+}
+
+function animateValue(el, target, suffix='%') {
+  let current = 0;
+  const step = target / 40;
+  const timer = setInterval(() => {
+    current = Math.min(current + step, target);
+    el.textContent = Math.round(current) + suffix;
+    if (current >= target) clearInterval(timer);
+  }, 30);
+}
+
+function calculate() {
+  const mindRaw = ['q1','q2','q3','q4','q5'].reduce((s,k) => s + (answers[k]||0), 0);
+  const timeRaw = ['q6','q7','q8','q9','q10'].reduce((s,k) => s + (answers[k]||0), 0);
+  const mindPct = Math.round(mindRaw / 20 * 100);
+  const timePct = Math.round(timeRaw / 20 * 100);
+  const totalPct = Math.round((mindPct + timePct) / 2);
+
+  document.getElementById('quizArea').style.display = 'none';
+  document.getElementById('resultArea').classList.add('visible');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  setTimeout(() => {
+    // Score cards
+    const mindEl = document.getElementById('mindPct');
+    const timeEl = document.getElementById('timePct');
+    mindEl.style.color = getColor(mindPct);
+    timeEl.style.color = getColor(timePct);
+    animateValue(mindEl, mindPct);
+    animateValue(timeEl, timePct);
+
+    // Gauge
+    const circumference = 251.2;
+    const fill = document.getElementById('gaugeFill');
+    const offset = circumference * (1 - totalPct / 100);
+    fill.style.stroke = getColor(totalPct);
+    fill.style.strokeDashoffset = offset;
+    animateValue(document.getElementById('gaugePct'), totalPct, '');
+
+    // Bars
+    const mindFill = document.getElementById('mindBarFill');
+    const timeFill = document.getElementById('timeBarFill');
+    mindFill.style.width = mindPct + '%';
+    mindFill.style.background = getColor(mindPct);
+    timeFill.style.width = timePct + '%';
+    timeFill.style.background = getColor(timePct);
+    document.getElementById('mindBar-label').textContent = mindPct + '%';
+    document.getElementById('timeBar-label').textContent = timePct + '%';
+
+    // Message
+    showMessage(totalPct, mindPct, timePct);
+    showInsights(mindPct, timePct, answers);
+  }, 300);
+}
+
+function showMessage(total, mind, time) {
+  const card = document.getElementById('messageCard');
+  let level, title, body, borderColor;
+
+  if (total <= 25) {
+    level = '🔴  危険水域';
+    title = '今すぐ立ち止まる勇気が必要です';
+    body = 'あなたの心と時間は、今ほぼ限界に近い状態です。100%で走り続けることは、燃え尽きや重大なミスにつながるリスクがあります。まず「何かをやめる」という決断が必要です。余白を作ることは逃げではなく、持続するための戦略です。';
+    borderColor = '#c0392b';
+  } else if (total <= 45) {
+    level = '🟠  要注意';
+    title = '余裕のなさが積み重なっています';
+    body = 'こころと時間のどちらか、あるいは両方に余裕が不足しています。今は大きなトラブルがないかもしれませんが、このままでは回復力が落ち、小さなことにも対応しにくくなってきます。意識して「余白」をスケジュールに入れることを始めましょう。';
+    borderColor = '#d4850a';
+  } else if (total <= 65) {
+    level = '🟡  ふつう';
+    title = '余白は「まあまあ」。でも、もっとできます';
+    body = 'ある程度の余裕はありますが、まだ「ギリギリ回っている」状態かもしれません。余白を意識的に守り、増やすことで、あなたの創造性・判断力・人間関係の質が一段上がります。今が「余白設計」をはじめる絶好のタイミングです。';
+    borderColor = '#b8860b';
+  } else if (total <= 82) {
+    level = '🟢  良好';
+    title = 'ゆとりがある。そのスペースを活かして';
+    body = '心にも時間にも、十分な余白があります。この「スペース」は創造的なアイデア、深い思考、予期せぬチャンスへの対応を生む土台です。余白を守ることを意識し続け、そこから生まれるものに注目してみてください。';
+    borderColor = '#5a7a5a';
+  } else {
+    level = '✨  理想的';
+    title = '余白の達人。その状態を維持・深化させて';
+    body = '素晴らしい状態です。あなたは意識的に余白を守り、フル稼働しないことの価値を実践しています。次のステップは、この余白をさらに「意味ある時間」として設計すること。そこから生まれる洞察や創造を大切にしてください。';
+    borderColor = '#3d7a5a';
+  }
+
+  card.style.borderLeftColor = borderColor;
+  document.getElementById('msgLevel').textContent = level;
+  document.getElementById('msgLevel').style.color = borderColor;
+  document.getElementById('msgTitle').textContent = title;
+  document.getElementById('msgBody').textContent = body;
+}
+
+function showInsights(mind, time, ans) {
+  const list = document.getElementById('insightList');
+  const insights = [];
+
+  if (mind < time) {
+    insights.push('時間的な余裕より、こころの余裕の方が不足しています。時間があっても「休めない」状態になっているかもしれません。');
+  } else if (time < mind) {
+    insights.push('こころの余裕はあるのに、時間的な制約が大きい状況です。スケジュールの整理や「やめること」の選択が鍵になります。');
+  }
+
+  if ((ans.q3||0) <= 1) insights.push('「何もしない時間」への罪悪感が強い傾向があります。余白は怠惰ではなく、次の行動の質を高める投資です。');
+  if ((ans.q4||0) <= 1) insights.push('最近、純粋な喜びを感じる機会が減っています。小さな楽しみを意図的にスケジュールに組み込んでみてください。');
+  if ((ans.q5||0) <= 1) insights.push('エネルギー残量がかなり低い状態です。回復のための時間を優先することが急務です。');
+  if ((ans.q8||0) <= 1) insights.push('「考える・振り返る」時間が確保できていません。この時間がないと、ただ忙しいだけで成長につながりにくくなります。');
+  if ((ans.q10||0) <= 1) insights.push('断ることへの抵抗が余裕を奪っています。「断る」ことは相手を傷つけることではなく、自分と相手の関係を健全に保つことです。');
+  if ((ans.q1||0) <= 1) insights.push('予定外のことへの対応力が落ちています。これはバッファー（余裕）不足のサインです。');
+
+  if (insights.length === 0) insights.push('全体的にバランスが取れています。この状態を意識的に継続し、さらに深めていきましょう。');
+
+  insights.forEach(text => {
+    const div = document.createElement('div');
+    div.className = 'insight-item';
+    div.innerHTML = `<div class="insight-dot"></div><div>${text}</div>`;
+    list.appendChild(div);
+  });
+}
+
+function restart() {
+  location.reload();
+}
+</script>
+</body>
+</html>
